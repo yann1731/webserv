@@ -1,8 +1,8 @@
 
-#include "parsing.hpp"
-#include "config.hpp"
-#include "logging.hpp"
-#include "server.hpp"
+#include "../include/parsing.hpp"
+#include "../include/config.hpp"
+#include "../include/logging.hpp"
+#include "../include/server.hpp"
 
 #ifndef CONFIG_FILE
 #define CONFIG_FILE "config/webserv.conf"

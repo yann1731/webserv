@@ -43,7 +43,7 @@ class HttpServer {
     void connectHandler(int socket_id);
     void disconnectHandler(int session_id);
 
-    std::pair<HttpRequest, ssize_t> receiveRequest(int session_id);
+    std::pair<std::string, ssize_t> receiveRequestChunk(int session_id);
     HttpResponse                    handleRequest(HttpRequest request);
     bool buildResponse(HttpRequest &, HttpResponse &, ServerConfig &);
     bool getMethod(HttpRequest &, HttpResponse &, ServerConfig &, LocationConfig *);

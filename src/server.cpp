@@ -1,5 +1,7 @@
-#include "server.hpp"
-#include "cgi.hpp"
+#include "../include/server.hpp"
+#include <exception>
+#include <string>
+#include "../include/cgi.hpp"
 
 extern HttpConfig httpConfig;
 
@@ -90,8 +92,7 @@ void HttpServer::run() {
         // Handle event
         if (server_sockets_.find(event.first) != server_sockets_.end()) {
             connectHandler(event.first);
-
-            } else {
+        } else {
             switch (event.second) {
                 case NONE:
                     break;
@@ -116,23 +117,23 @@ void HttpServer::readableHandler(int session_id) {
     // Logger::instance().log("Received request on fd: " + std::to_string(session_id));
 
     // Receive the request
-    std::pair<HttpRequest, ssize_t> request = receiveRequest(session_id);
-
-    // Logger::instance().log(request.first.printRequest());
-
-    if (request.second == 0) {
+    try {
+        std::pair<std::string, ssize_t> partialRequest = receiveRequestChunk(session_id); //Should prolly chunk the request instead
+        if (partialRequest.second == 0 || partialRequest.second < READ_BUFFER_SIZE) {
+            sessions_[session_id]->appendToRawRequest(partialRequest.first);
+            HttpRequest request = HttpRequest(sessions_[session_id]->getRawRequest(), sessions_[session_id]);
+            HttpResponse response = handleRequest(request);
+            sessions_[session_id]->addSendQueue(response.getMessage());
+            listener_.registerEvent(session_id, WRITABLE);   
+        }
+        else {
+            sessions_[session_id]->appendToRawRequest(partialRequest.first);
+        }
+    } catch (std::exception &e) {
         disconnectHandler(session_id);
-        return;
+        std::cerr << e.what() << std::endl;
     }
-
-    // Handle the request
-    HttpResponse response = handleRequest(request.first);
-
-    // Add the response to the clients send queue
-    sessions_[session_id]->addSendQueue(response.getMessage());
-
-    // Add the session to the listener
-    listener_.registerEvent(session_id, WRITABLE);
+    // Logger::instance().log(request.first.printRequest());
 }
 
 void HttpServer::writableHandler(int session_id) {
@@ -187,14 +188,9 @@ void HttpServer::disconnectHandler(int session_id) {
     close(session_id);
 }
 
-std::pair<HttpRequest, ssize_t> HttpServer::receiveRequest(int session_id) {
+std::pair<std::string, ssize_t> HttpServer::receiveRequestChunk(int session_id) {
     std::pair<std::string, ssize_t> buffer_pair = sessions_[session_id]->recv(session_id);
-
-    if (buffer_pair.second < 0)
-        disconnectHandler(session_id);
-    HttpRequest request(buffer_pair.first, sessions_[session_id]);
-
-    return std::make_pair(request, buffer_pair.second);
+    return buffer_pair;
 }
 
 bool isResourceRequest(HttpResponse &response, const std::string &uri) {

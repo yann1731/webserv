@@ -15,7 +15,7 @@
  *  - Cole H.
  */
 
-#include "parsing.hpp"
+#include "../include/parsing.hpp"
 
 #define INDEX 0
 

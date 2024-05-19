@@ -1,7 +1,8 @@
-#include "socket.hpp"
+#include "../include/socket.hpp"
+#include <stdexcept>
 
 Session::Session(int sockfd, const struct sockaddr* addr, socklen_t addrlen)
-    : sockfd_(sockfd), addr_(addr), addrlen_(addrlen) {}
+    : rawRequest_(""), sockfd_(sockfd), addr_(addr), addrlen_(addrlen) {}
 
 Session::~Session() {
     delete addr_;
@@ -17,6 +18,14 @@ const struct sockaddr* Session::getSockaddr() const {
 
 void Session::addSendQueue(const std::string& buffer) {
     send_queue_.push_back(buffer);
+}
+
+std::string &Session::getRawRequest() {
+    return rawRequest_;
+}
+
+void Session::appendToRawRequest(std::string &newChunk) {
+    rawRequest_.append(newChunk);
 }
 
 TcpSession::TcpSession(int sockfd, const struct sockaddr* addr, socklen_t addrlen)
@@ -48,25 +57,19 @@ bool TcpSession::send() {
 std::pair<std::string, ssize_t> TcpSession::recv(int client) const {
     char buffer[READ_BUFFER_SIZE];
     ssize_t bytes_received;
-    ssize_t total_bytes_received = 0;
     std::ifstream ifs;
     std::vector<char> buffer_data = std::vector<char>(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
 
-    try {
-        do {
-            bytes_received = ::recv(client, buffer, READ_BUFFER_SIZE, 0);
-            if (bytes_received > 0) {
-                for (ssize_t i = 0; i < bytes_received; ++i) {
-                    buffer_data.push_back(buffer[i]);
-                }
-                total_bytes_received += bytes_received;    
-            }
-        } while (bytes_received > 0);
-    } catch (std::exception &e) {
-        std::cerr << "DAT STRING ERROR: " << e.what() << std::endl;
+    bytes_received = ::recv(client, buffer, READ_BUFFER_SIZE, 0);
+    if (bytes_received > 0) {
+        for (ssize_t i = 0; i < bytes_received; ++i) {
+            buffer_data.push_back(buffer[i]);
+        }  
     }
+    else
+        throw std::runtime_error("Error with recv");
     std::string vector_str(buffer_data.begin(), buffer_data.end());
-    return std::make_pair(vector_str, total_bytes_received);
+    return std::make_pair(vector_str,bytes_received);
 }
 
 Session* tcp_session_generator(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {

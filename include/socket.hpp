@@ -17,7 +17,7 @@
 #include "logging.hpp"
 
 #define SO_MAX_QUEUE     25
-#define READ_BUFFER_SIZE 1024
+#define READ_BUFFER_SIZE 4096
 
 // Session abstract base class
 class Session {
@@ -30,8 +30,11 @@ class Session {
     int                                     getSockFd() const;
     const struct sockaddr*                  getSockaddr() const;
     void                                    addSendQueue(const std::string& buffer);
+    std::string                            &getRawRequest(void);
+    void                                    appendToRawRequest(std::string &newChunk);
 
    protected:
+    std::string             rawRequest_;
     int                     sockfd_;     /**< Session socket file descriptor */
     const struct sockaddr*  addr_;       /**< Session socket address */
     socklen_t               addrlen_;    /**< Session socket address length */
